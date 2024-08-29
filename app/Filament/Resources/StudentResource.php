@@ -9,6 +9,7 @@ use App\Models\Student;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
+use Illuminate\Support\Facades\File;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Collection;
 use App\Filament\Resources\StudentResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\StudentResource\RelationManagers;
+use ZipArchive;
 
 class StudentResource extends Resource
 {
@@ -87,13 +89,46 @@ class StudentResource extends Resource
 
                     Tables\Actions\BulkAction::make('generateQr')
                         ->action(function (Collection $records) {
+
+                            // Create Sections Folder First
+                            $sections = Section::all();
+                            foreach ($sections as $section) {
+                                // Check if the Folder is Not Exists in Public
+                                if(! File::exists(public_path('storage/QrCodes/' . $section->program . ' ' . $section->year . $section->block))){
+                                    File::makeDirectory(public_path('storage/QrCodes/' . $section->program . ' ' . $section->year . $section->block));
+                                }
+                            }
+
                             $records->each(function ($record) {
 
                                 // Code Here to Execute QRCode
-                                QrCode::size(300)->generate($record->id, public_path('storage/QrCodes/' . $record->last_name . '.svg'));
+                                QrCode::size(300)->generate($record->id, public_path('storage/QrCodes/'. $record->section->program . ' ' . $record->section->year . $record->section->block . '/' . $record->last_name . '.svg'));
                                 // dump($record->id);
                             });
 
+                            // Create Compressed ZIP File after Generating QRCode for Students
+                            $zip_file = public_path('storage/QrCodes/qrcodes.zip');
+                            $zip = new \ZipArchive();
+                            $zip->open($zip_file, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+
+                            $path = public_path('storage/QrCodes');
+                            $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path));
+                            foreach ($files as $file)
+                            {
+                                // We're skipping all subfolders
+                                if (!$file->isDir()) {
+                                    $filePath = $file->getRealPath();
+
+                                    // extracting filename with substr/strlen
+                                    $relativePath = substr($filePath, strlen($path) + 1);
+                                    $zip->addFile($filePath, $relativePath);
+                                }
+                            }
+                            $zip->close();
+                            return response()->download($zip_file)->deleteFileAfterSend(true);
+
+
+                            // Call the Notification is Successfull.
                             Notification::make()
                                 ->title('Generate QR Code Successfully')
                                 ->success()
