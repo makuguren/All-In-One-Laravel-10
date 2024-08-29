@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\StudentResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\StudentResource\RelationManagers;
+use Illuminate\Database\Eloquent\Collection;
 
 class StudentResource extends Resource
 {
@@ -81,6 +82,18 @@ class StudentResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+
+                    Tables\Actions\BulkAction::make('generateQr')
+                        ->action(function (Collection $records) {
+                            $records->each(function ($record) {
+
+                                // Code Here to Execute QRCode
+                                dump($record->id);
+
+                            });
+                        })
+                        ->requiresConfirmation()
+                        ->label('Generate QR Code')
                 ]),
             ]);
     }
