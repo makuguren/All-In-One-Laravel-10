@@ -9,11 +9,13 @@ use App\Models\Student;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Database\Eloquent\Collection;
 use App\Filament\Resources\StudentResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\StudentResource\RelationManagers;
-use Illuminate\Database\Eloquent\Collection;
 
 class StudentResource extends Resource
 {
@@ -88,9 +90,14 @@ class StudentResource extends Resource
                             $records->each(function ($record) {
 
                                 // Code Here to Execute QRCode
-                                dump($record->id);
-
+                                QrCode::size(300)->generate($record->id, public_path('storage/QrCodes/' . $record->last_name . '.svg'));
+                                // dump($record->id);
                             });
+
+                            Notification::make()
+                                ->title('Generate QR Code Successfully')
+                                ->success()
+                                ->send();
                         })
                         ->requiresConfirmation()
                         ->label('Generate QR Code')
