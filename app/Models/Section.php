@@ -14,4 +14,9 @@ class Section extends Model
         'year',
         'block'
     ];
+
+    public function getProgramYearBlockAttribute()
+    {
+        return "{$this->program} {$this->year}{$this->block}";
+    }
 }
